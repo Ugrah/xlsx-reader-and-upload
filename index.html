@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<!-- Required meta tags -->
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+	<!-- Bootstrap CSS -->
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+		integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+	<title>Module, Import xlsx!</title>
+</head>
+
+<body>
+	<div class="d-flex flex-column-fluid">
+		<!--begin::Container-->
+		<div class="container overlay-wrapper mb-3">
+			<div class=""><h2>Module, Import xlsx!</h2></div>
+			<div class="row">
+				<div class="col">
+					<input type="file" id="fileUpload" />
+					<button id="loadfile" class="btn btn-info" disabled>Load File</button>
+					<button id="upload-data" class="btn btn-success pull-right mx-3" disabled>Upload Data</button>
+				</div>
+			</div>
+
+			<div class="row mt-4">
+				<div class="col">
+					<h3 class="">
+						Data to upload
+					</h3>
+					<div align="center">
+						<button id="table_loader" style="width:500px" name="table_loader"
+							class="btn btn-primary d-none" type="button" disabled="">
+							Please wait while we are loading the users list &nbsp;
+							<span class="spinner"></span>
+						</button>
+					</div>
+					<div id="users-dt_wrapper" class="dataTables_wrapper dt-bootstrap4 no-footer">
+						<div class="row">
+							<div class="col-sm-12">
+								<table class="table table-hover dataTable no-footer" id="data-to-upload" role="grid"
+									aria-describedby="users-dt_info">
+									<thead>
+										<tr role="row">
+											<th class="sorting_disabled">Username</th>
+											<th class="sorting_disabled">Skill ID</th>
+											<th class="sorting_disabled">Manager Username</th>
+											<th class="sorting_disabled">Current Level</th>
+											<th class="sorting_disabled">Target Level</th>
+											<th class="sorting_disabled">Acquired Date</th>
+											<th class="sorting_disabled">Acquired Time</th>
+											<th>Status</th>
+										</tr>
+									</thead>
+									<tbody></tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<!--end::Container-->
+	</div>
+
+	<!-- Optional JavaScript -->
+	<!-- jQuery first, then Popper.js, then Bootstrap JS -->
+	<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+		integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+		crossorigin="anonymous"></script>
+	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+		integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+		crossorigin="anonymous"></script>
+
+	<!-- MomentJs CDN -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.21.0/moment.min.js" type="text/javascript"></script>
+
+	<!-- MomentJs Timezone CDN -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.33/moment-timezone.min.js" integrity="sha512-jkvef+BAlqJubZdUhcyvaE84uD9XOoLR3e5GGX7YW7y8ywt0rwcGmTQHoxSMRzrJA3+Jh2T8Uy6f8TLU3WQhpQ==" crossorigin="anonymous"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.33/moment-timezone-with-data.js" integrity="sha512-nwFvp27oDSOkJAXZdkqJDB2FkkI3dXJKSapfBmm+R9YW/4KvT8SAGhyTxmt6Uxfa49rTYODHdjjVjOLSJELfJQ==" crossorigin="anonymous"></script>
+
+	<!-- axios CDN -->
+	<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+	<!-- Lodash CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+
+	<!-- Sweetalert2 CDN -->
+	<script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+	<!-- XLSX READER -->
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.13.5/xlsx.full.min.js"></script>
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.13.5/jszip.js"></script>
+
+	<script>
+		"use strict"
+		$(document).ready(function () {
+			let dataToUpload = [];
+            let dataToCheck = [];
+            let onotherDataToCheck = [];
+            let defaultBatchSize = 1;
+
+			$("body").on("click", "#loadfile", function() {
+                //Reference the FileUpload element.
+                var fileUpload = $("#fileUpload")[0];
+
+                //Validate whether File is valid Excel file.
+                var regex = /^([a-zA-Z0-9\s_\\.\-:])+(.xls|.xlsx)$/;
+                if (regex.test(fileUpload.value.toLowerCase())) {
+                    if (typeof(FileReader) != "undefined") {
+                        var reader = new FileReader();
+
+                        //For Browsers other than IE.
+                        if (reader.readAsBinaryString) {
+                            reader.onload = function(e) {
+                                processExcel(e.target.result);
+                            };
+                            reader.readAsBinaryString(fileUpload.files[0]);
+                        } else {
+                            //For IE Browser.
+                            reader.onload = function(e) {
+                                var data = "";
+                                var bytes = new Uint8Array(e.target.result);
+                                for (var i = 0; i < bytes.byteLength; i++) {
+                                    data += String.fromCharCode(bytes[i]);
+                                }
+                                processExcel(data);
+                            };
+                            reader.readAsArrayBuffer(fileUpload.files[0]);
+                        }
+                    } else {
+                        alert("This browser does not support HTML5.");
+                    }
+                } else {
+                    alert("Please upload a valid Excel file.");
+                }
+            });
+
+			$("#fileUpload").change(function(e) {
+                if ($(this)[0].files.length) $('#loadfile').prop('disabled', false);
+                else $('#loadfile').prop('disabled', true);
+            });
+
+			$("#upload-data").click(function(e) {
+                e.preventDefault();
+                // $('#loadfile').prop('disabled', true);
+                // $(this).prop('disabled', true);
+                uploadData(dataToUpload, defaultBatchSize);
+            });
+
+			const Import = {
+                init: function() {
+                    // $('#overlay-container').addClass('overlay overlay-block');
+                    // $('.overlay-layer').removeClass('d-none');
+					// Page loader
+
+                    $.when(this.getDataToCheck(), this.getAnotherDataToCheck())
+                        .then((dataToCheckResponse, onotherDataToCheckResponse) => {
+                            dataToCheck = usernameResponse.data;
+                            onotherDataToCheck = psSkillResponse.data;
+                            // $('#overlay-container').removeClass('overlay overlay-block');
+                            // $('.overlay-layer').addClass('d-none');
+							// Remove Page loader
+                        });
+                },
+                getDataToCheck: function() {
+                    let d = new $.Deferred();
+                    $.ajax({
+                        url: 'get.php',
+                        type: 'GET',
+                        success: function(data) {
+                            d.resolve(data);
+                        }
+                    });
+                    return d.promise();
+                },
+                getAnotherDataToCheck: function() {
+                    let d = new $.Deferred();
+                    $.ajax({
+                        url: 'get.php',
+                        type: 'GET',
+                        success: function(data) {
+                            d.resolve(data);
+                        }
+                    });
+                    return d.promise();
+                },
+                uniqId() {
+                    return Math.round(new Date().getTime() + (Math.random() * 100));
+                },
+				saveRowData(callParams, dataRow = {}) {
+					return new Promise((resolve, reject) => {
+						$.ajax({
+							type: (typeof callParams.type != 'undefined') ? callParams.type : 'POST',
+							url: callParams.url,
+							quietMillis: 100,
+							dataType: (typeof callParams.dataType != 'undefined') ? callParams.dataType : 'JSON',
+							data: dataRow,
+							// cache: true,
+							success: function(response) {
+								resolve(response);
+							},
+							error: function(response) {
+								reject(response);
+							}
+						});
+					});
+				}
+            }
+
+			// Async function to send mail to a list of data.
+            const uploadData = async (dataToUpload, batchSize, loader = false) => {
+				let error = [];
+                const dataLength = dataToUpload.length
+
+                for (let i = 0; i < dataLength; i += batchSize) {
+                    const requests = dataToUpload.slice(i, i + batchSize).map((data) => { // The batch size is 2. We are processing in a set of 2 users.
+
+                        let ajaxCallParams = {},
+                            ajaxDataParams = {};
+                        ajaxCallParams.type = "POST"; // POST type function 
+                        ajaxCallParams.url = "save.php"; // Pass Complete end point Url e-g Payment Controller, Create Action
+                        ajaxCallParams.dataType = "JSON"; // Return data type e-g Html, Json etc
+                        ajaxDataParams = data;
+
+                        $(`span[data-uiid="${data.uiid}"]`).removeClass('label-light-primary').addClass('label-light-warning').text('In progress');
+
+                        return Import.saveRowData(ajaxCallParams, ajaxDataParams) // Async function to send the mail.
+                            .catch(e => console.log(`Error save data | ${data} - ${e}`)) // Catch the error if something goes wrong. So that it won't block the loop.
+                    })
+
+                    // requests will have 2 or less pending promises. 
+                    // Promise.all will wait till all the promises got resolves and then take the next 2.
+                    const results = await Promise.all(requests)
+                        .catch(e => { error.push(e); }) // Catch the error.
+
+                    // console.log(results);
+                    results.forEach((item) => {
+                        $(`span[data-uiid="${item.uiid}"]`).text('Done');
+                        // $(`span[data-uiid="${item.uiid}"]`).removeClass('label-light-warning');
+                        // if (item.status) $(`span[data-uiid="${item.uiid}"]`).addClass('label-light-success').text('Done');
+                        // else $(`span[data-uiid="${item.uiid}"]`).addClass('label-light-danger').text('Error');
+                    });
+                }
+
+				$('#fileUpload').val('');
+                Swal.fire({ type: 'success', title: 'Data Saved', text: 'Save data complete !' });
+            }
+
+			function processExcel(data) {
+                //Read the Excel File data.
+                var workbook = XLSX.read(data, {
+                    type: 'binary'
+                });
+
+                //Fetch the name of First Sheet.
+                var firstSheet = workbook.SheetNames[0];
+
+                //Read all rows from First Sheet into an JSON array.
+                var excelRows = XLSX.utils.sheet_to_row_object_array(workbook.Sheets[firstSheet]);
+
+                let $table = $('#data-to-upload');
+
+                $table.find('tbody').html('');
+                dataToUpload = [];
+
+                //Add the data rows from Excel file.
+                for (var i = 0; i < excelRows.length; i++) {
+
+					// validation check
+                    // let userExits = _.findLast(usernames, function(o) {
+                    //     return o.username == excelRows[i].username;
+                    // });
+                    // let psSkillExist = _.findLast(psSkills, function(o) {
+                    //     return parseInt(o.id) == parseInt(excelRows[i].skillID);
+                    // });
+                    // let managerExits = _.findLast(usernames, function(o) {
+                    //     return o.username == excelRows[i].managerUsername;
+                    // });
+
+                    var aDate = moment(excelRows[i].acquiredDate, 'DD/MM/YYYY', true);
+                    var aTime = moment(excelRows[i].acquiredTime, 'HH:mm:ss', true);
+
+                    var userCheck = true;
+                    var psSkillCheck = true;
+                    var managerCheck = true;
+                    var currentLevelCheck = parseInt(excelRows[i].currentLevel) ? true : false;
+                    var targetLevelCheck = parseInt(excelRows[i].targetLevel) && parseInt(excelRows[i].targetLevel) >= parseInt(excelRows[i].currentLevel) ?
+                        true : false;
+
+                    var statusCheck = (userCheck && psSkillCheck && managerCheck && currentLevelCheck && targetLevelCheck && aDate.isValid() && aTime.isValid()) ? true : false;
+
+                    excelRows[i].uiid = Import.uniqId();
+
+                    let $row = `<tr role="row" class="">
+                        <td><span class="label label-lg ${(userCheck ? 'label-light-primary' : 'label-light-danger')} label-inline">${excelRows[i].username}</span></td>
+                        <td><span class="label label-lg ${(psSkillCheck ? 'label-light-primary' : 'label-light-danger')} label-inline">${excelRows[i].skillID}</span></td>
+                        <td><span class="label label-lg ${(managerCheck ? 'label-light-primary' : 'label-light-danger')} label-inline">${excelRows[i].managerUsername}</span></td>
+                        <td><span class="label label-lg ${(currentLevelCheck ? 'label-light-primary' : 'label-light-danger')} label-inline">${excelRows[i].currentLevel}</span></td>
+                        <td><span class="label label-lg ${(targetLevelCheck ? 'label-light-primary' : 'label-light-danger')} label-inline">${excelRows[i].targetLevel}</span></td>
+                        <td><span class="label label-lg ${(aDate.isValid() ? 'label-light-primary' : 'label-light-danger')} label-inline">${aDate.isValid() ? aDate.format('DD-MM-YYYY') : 'Invalid date format'}</span></td>
+                        <td><span class="label label-lg ${(aTime.isValid() ? 'label-light-primary' : 'label-light-danger')} label-inline">${aTime.isValid() ? aTime.format('HH:mm') : 'Invalid Time format'}</span></td>
+                        <td><span class="label label-lg ${(statusCheck ? 'label-light-primary' : 'label-light-danger')} label-inline" data-uiid="${excelRows[i].uiid}">${statusCheck ? 'Ready' : 'Bad'}</span></td>
+                    </tr>`;
+                    if (excelRows[i].username) $table.find('tbody').append($row);
+
+                    // 
+                    if (statusCheck) dataToUpload.push(excelRows[i]);
+                }
+
+                if (excelRows.length) {
+                    data = excelRows;
+                    $('#loadfile').prop('disabled', false);
+                } else {
+                    data = [];
+                    $('#loadfile').prop('disabled', true);
+                }
+                if (dataToUpload.length) $('#upload-data').prop('disabled', false);
+                else $('#upload-data').prop('disabled', true);
+            };
+            
+            function saveRowData(callParams, dataRow = {}) {
+                return new Promise((resolve, reject) => {
+                    $.ajax({
+                        type: (typeof callParams.type != 'undefined') ? callParams.type : 'POST',
+                        url: callParams.url,
+                        quietMillis: 100,
+                        dataType: (typeof callParams.dataType != 'undefined') ? callParams.dataType : 'JSON',
+                        data: dataRow,
+                        // cache: true,
+                        success: function(response) {
+                            resolve(response);
+                        },
+                        error: function(response) {
+                            reject(response);
+                        }
+                    });
+                });
+            }
+		
+		
+			// Init page
+            // Import.init();
+		});
+	</script>
+</body>
+
+</html>

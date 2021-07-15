@@ -5,7 +5,6 @@ $status = 200;
 $results = (object) [
     'name' => 'Grah',
     'firstname' => 'Ulrich',
-    'age' => 31,
 ];
 
 http_response_code($status);

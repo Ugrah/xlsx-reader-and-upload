@@ -21,7 +21,7 @@
 		<div class="container overlay-wrapper mb-3">
 			<div class="">
 				<h2>Module, Import xlsx!</h2>
-				<a href="sample_data.xlsx" id="downloadSample" class="btn btn-warning float-right">Download Sample data</a>
+				<a href="dummy-import.xlsx" id="downloadSample" class="btn btn-warning float-right">Download Sample data</a>
 			</div>
 			<div class="row">
 				<div class="col">
@@ -50,13 +50,12 @@
 									aria-describedby="users-dt_info">
 									<thead>
 										<tr role="row">
-											<th class="sorting_disabled">Username</th>
-											<th class="sorting_disabled">Skill ID</th>
-											<th class="sorting_disabled">Manager Username</th>
-											<th class="sorting_disabled">Current Level</th>
-											<th class="sorting_disabled">Target Level</th>
-											<th class="sorting_disabled">Acquired Date</th>
-											<th class="sorting_disabled">Acquired Time</th>
+											<th class="sorting_disabled">Id</th>
+											<th class="sorting_disabled">Firstname</th>
+											<th class="sorting_disabled">Lastname</th>
+											<th class="sorting_disabled">Date</th>
+											<th class="sorting_disabled">Time</th>
+											<th class="sorting_disabled">Balance</th>
 											<th>Status</th>
 										</tr>
 									</thead>
@@ -112,7 +111,12 @@
             let onotherDataToCheck = [];
             let defaultBatchSize = 1;
 
-			const Import = {
+            // Main Script
+            const Import = {
+                // Custumoze for specific Import Page
+                dataTable: null,
+                defaultDateFileFormat: 'DD/MM/YYYY',
+                defaultTimeFileFormat: 'HH:mm:ss',
                 init: function() {
                     // $('#overlay-container').addClass('overlay overlay-block');
                     // $('.overlay-layer').removeClass('d-none');
@@ -149,9 +153,20 @@
                     });
                     return d.promise();
                 },
-                // Custumoze for specific Import Page
                 rowIsValid: function(row) {
-                    return true;
+                    let aDate = moment(row.date, this.defaultDateFileFormat, true);
+                    let aTime = moment(row.time, this.defaultTimeFileFormat, true);
+
+                    var idCheck = typeof row.id != 'undefined' ? true : false;
+                    var firstnameCheck = typeof row.firstname != 'undefined' ? true : false;
+                    var lastnameCheck = typeof row.lastname != 'undefined' ? true : false;
+                    var aDateCheck = aDate.isValid() ?? false;
+                    var aTimeCheck = aTime.isValid() ?? false;
+                    var balanceCheck = typeof row.balance != 'undefined' ? true : false;
+                    
+                    var statusCheck = (idCheck && firstnameCheck && lastnameCheck && aDateCheck && aTimeCheck && balanceCheck) ? true : false;
+
+                    return statusCheck;
                 },
                 detailsFormat ( d ) {
                     let dateTdContent = '';
@@ -179,90 +194,116 @@
                     });
 
                     //Fetch the name of First Sheet.
-                    var firstSheet = workbook.SheetNames[0];
+                    var dataSheet = workbook.SheetNames[0];
 
                     //Read all rows from First Sheet into an JSON array.
-                    var excelRows = XLSX.utils.sheet_to_row_object_array(workbook.Sheets[firstSheet]);
+                    var excelRows = XLSX.utils.sheet_to_row_object_array(workbook.Sheets[dataSheet]);
 
-                    let $table = $('#data-to-upload');
+                    excelRows.forEach((item) => {
+                        item.uiid = Import.uniqId();
+                    });
 
-                    $table.find('tbody').html('');
                     dataToUpload = [];
 
-                    //Add the data rows from Excel file.
-                    for (var i = 0; i < excelRows.length; i++) {
-
-                        // validation check
-                        // let userExits = _.findLast(usernames, function(o) {
-                        //     return o.username == excelRows[i].username;
-                        // });
-                        // let psSkillExist = _.findLast(psSkills, function(o) {
-                        //     return parseInt(o.id) == parseInt(excelRows[i].skillID);
-                        // });
-                        // let managerExits = _.findLast(usernames, function(o) {
-                        //     return o.username == excelRows[i].managerUsername;
-                        // });
-
-                        var aDate = moment(excelRows[i].acquiredDate, 'DD/MM/YYYY', true);
-                        var aTime = moment(excelRows[i].acquiredTime, 'HH:mm:ss', true);
-
-                        var userCheck = true;
-                        var psSkillCheck = true;
-                        var managerCheck = true;
-                        var currentLevelCheck = parseInt(excelRows[i].currentLevel) ? true : false;
-                        var targetLevelCheck = parseInt(excelRows[i].targetLevel) && parseInt(excelRows[i].targetLevel) >= parseInt(excelRows[i].currentLevel) ?
-                            true : false;
-
-                        var statusCheck = (userCheck && psSkillCheck && managerCheck && currentLevelCheck && targetLevelCheck && aDate.isValid() && aTime.isValid()) ? true : false;
-
-                        excelRows[i].uiid = Import.uniqId();
-
-                        let $row = `<tr role="row" class="">
-                            <td><span class="label label-lg ${(userCheck ? 'label-light-primary' : 'label-light-danger')} label-inline">${excelRows[i].username}</span></td>
-                            <td><span class="label label-lg ${(psSkillCheck ? 'label-light-primary' : 'label-light-danger')} label-inline">${excelRows[i].skillID}</span></td>
-                            <td><span class="label label-lg ${(managerCheck ? 'label-light-primary' : 'label-light-danger')} label-inline">${excelRows[i].managerUsername}</span></td>
-                            <td><span class="label label-lg ${(currentLevelCheck ? 'label-light-primary' : 'label-light-danger')} label-inline">${excelRows[i].currentLevel}</span></td>
-                            <td><span class="label label-lg ${(targetLevelCheck ? 'label-light-primary' : 'label-light-danger')} label-inline">${excelRows[i].targetLevel}</span></td>
-                            <td><span class="label label-lg ${(aDate.isValid() ? 'label-light-primary' : 'label-light-danger')} label-inline">${aDate.isValid() ? aDate.format('DD-MM-YYYY') : 'Invalid date format'}</span></td>
-                            <td><span class="label label-lg ${(aTime.isValid() ? 'label-light-primary' : 'label-light-danger')} label-inline">${aTime.isValid() ? aTime.format('HH:mm') : 'Invalid Time format'}</span></td>
-                            <td><span class="label label-lg ${(statusCheck ? 'label-light-primary' : 'label-light-danger')} label-inline" data-uiid="${excelRows[i].uiid}">${statusCheck ? 'Ready' : 'Bad'}</span></td>
-                        </tr>`;
-                        if (excelRows[i].username) $table.find('tbody').append($row);
-
-                        // 
-                        if (statusCheck) dataToUpload.push(excelRows[i]);
+                    if ( $.fn.dataTable.isDataTable('#data-to-upload') ) {
+                        this.dataTable.destroy();
                     }
 
-                    if (excelRows.length) {
-                        data = excelRows;
-                        $('#loadfile').prop('disabled', false);
-                    } else {
-                        data = [];
-                        $('#loadfile').prop('disabled', true);
-                    }
-                    if (dataToUpload.length) $('#upload-data').prop('disabled', false);
-                    else $('#upload-data').prop('disabled', true);
+                    this.dataTable = $('#data-to-upload').DataTable( {
+                        data: excelRows,
+                        drawCallback: function( settings ) {
+                            
+                        },
+                        initComplete: function () {
+                            excelRows.forEach((item) => {
+                                if( Import.rowIsValid(item) ) dataToUpload.push(item);
+                            });
+                            if (dataToUpload.length) $('#upload-data').prop('disabled', false);
+                            else $('#upload-data').prop('disabled', true);
+                        },
+                        columns: [
+                            {
+                                "data": "id",
+                            },
+                            { "data": "firstname" },
+                            { "data": "lastname" },
+                            {
+                                "data": "date",
+                                "render": function ( data, type, row, meta ) {
+                                    var aDate = moment(data, 'DD/MM/YYYY', true);
+                                    return `${(aDate.isValid() ? `<span><i class="far fa-calendar-minus"></i> ${aDate.format('DD-MM-YYYY')}</span>` : '<span class="badge badge-danger"><i class="far fa-calendar-minus"></i> Invalide Date</span>' )}`;
+                                }
+                            },
+                            {
+                                "data": "time",
+                                "render": function ( data, type, row, meta ) {
+                                    var aTime = moment(data, 'HH:mm:ss', true);
+                                    return `${(aTime.isValid() ? `<span><i class="far fa-clock"></i> ${aTime.format('HH:mm')}</span>` : '<span class="badge badge-danger"><i class="far fa-clock"></i> Invalide Time</span>' )}`;
+                                }
+                            },
+                            { "data": "balance" },
+                            { 
+                                "data": null,
+                                "render": function ( data, type, row, meta ) {
+                                    return `<span class="badge ${(Import.rowIsValid(row) ? 'badge-success' : 'badge-danger')} badge-inline" data-uiid="${row.uiid}">${Import.rowIsValid(row) ? 'Ready' : 'Bad'}</span>`;
+                                }
+                            }
+                        ]
+                    });
+
+                    // For Detail Row
+                    // Array to track the ids of the details displayed rows
+                    var detailRows = [];
+                    
+                    $('#data-to-upload tbody').on( 'click', 'tr td.details-control', function () {
+                        var tr = $(this).closest('tr');
+                        var row = Import.dataTable.row( tr );
+                        var idx = $.inArray( tr.attr('uiid'), detailRows );
+
+                        if ( row.child.isShown() ) {
+                            tr.removeClass( 'details' );
+                            row.child.hide();
+
+                            // Remove from the 'open' array
+                            detailRows.splice( idx, 1 );
+                        }
+                        else {
+                            tr.addClass( 'details' );
+                            row.child( Import.detailsFormat( row.data() ) ).show();
+
+                            // Add to the 'open' array
+                            if ( idx === -1 ) {
+                                detailRows.push( tr.attr('id') );
+                            }
+                        }
+                    });
+
+                    // On each draw, loop over the `detailRows` array and show any child rows
+                    Import.dataTable.on( 'draw', function () {
+                        $.each( detailRows, function ( i, id ) {
+                            $('#'+id+' td.details-control').trigger( 'click' );
+                        } );
+                    });
                 },
                 saveRowData(callParams, dataRow = {}) {
-					return new Promise((resolve, reject) => {
-						$.ajax({
-							type: (typeof callParams.type != 'undefined') ? callParams.type : 'POST',
-							url: callParams.url,
-							quietMillis: 100,
-							dataType: (typeof callParams.dataType != 'undefined') ? callParams.dataType : 'JSON',
-							data: dataRow,
-							// cache: true,
-							success: function(response) {
-								resolve(response);
-							},
-							error: function(response) {
-								reject(response);
-							}
-						});
-					});
-				},
+                    return new Promise((resolve, reject) => {
+                        $.ajax({
+                            type: (typeof callParams.type != 'undefined') ? callParams.type : 'POST',
+                            url: callParams.url,
+                            quietMillis: 100,
+                            dataType: (typeof callParams.dataType != 'undefined') ? callParams.dataType : 'JSON',
+                            data: dataRow,
+                            // cache: true,
+                            success: function(response) {
+                                resolve(response);
+                            },
+                            error: function(response) {
+                                reject(response);
+                            }
+                        });
+                    });
+                },
                 uploadData: async (dataToUpload, batchSize, loader = false) => {
-                    let error = [];
                     const dataLength = dataToUpload.length
 
                     for (let i = 0; i < dataLength; i += batchSize) {
@@ -284,34 +325,31 @@
                         // requests will have 2 or less pending promises. 
                         // Promise.all will wait till all the promises got resolves and then take the next 2.
                         const results = await Promise.all(requests)
-                            .catch(e => { error.push(e); }) // Catch the error.
+                            .catch(e => console.log(`Error get id for the batch ${i} - ${e}`)) // Catch the error.
 
-                        // console.log(results);
                         results.forEach((item) => {
-                            $(`span[data-uiid="${item.uiid}"]`).text('Done');
-                            // $(`span[data-uiid="${item.uiid}"]`).removeClass('label-light-warning');
-                            // if (item.status) $(`span[data-uiid="${item.uiid}"]`).addClass('label-light-success').text('Done');
-                            // else $(`span[data-uiid="${item.uiid}"]`).addClass('label-light-danger').text('Error');
+                            $(`span[data-uiid="${item.uiid}"]`).removeClass('label-light-warning');
+                            if (item.uiid) $(`span[data-uiid="${item.uiid}"]`).addClass('label-light-success').text('Done');
+                            else $(`span[data-uiid="${item.uiid}"]`).addClass('label-light-danger').text('Error');
                         });
                     }
 
                     $('#fileUpload').val('');
-                    Swal.fire({ type: 'success', title: 'Data Saved', text: 'Save data complete !' });
+                    Swal.fire({ type: 'success', title: 'Data Upload', text: 'Data Uploaded successfully !' });
                 },
                 uniqId() {
                     return Math.round(new Date().getTime() + (Math.random() * 100));
                 }
             }
 
+
             // Events Listenner start
             $("body").on("click", "#loadfile", function() {
                 //Reference the FileUpload element.
                 var fileUpload = $("#fileUpload")[0];
-
                 //Validate whether File is valid Excel file.
-                var regex = /^([a-zA-Z0-9\s_\\.\-:])+(.xls|.xlsx)$/;
-                if (regex.test(fileUpload.value.toLowerCase())) {
-                    if (typeof(FileReader) != "undefined") {
+
+                if (typeof(FileReader) != "undefined") {
                         var reader = new FileReader();
 
                         //For Browsers other than IE.
@@ -335,9 +373,6 @@
                     } else {
                         alert("This browser does not support HTML5.");
                     }
-                } else {
-                    alert("Please upload a valid Excel file.");
-                }
             });
 
 			$("#fileUpload").change(function(e) {
